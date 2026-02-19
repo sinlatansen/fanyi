@@ -2,24 +2,19 @@ use clap::Parser;
 use serde::Deserialize;
 
 #[derive(Parser)]
-#[command(name = "fyy")]
+#[command(name = "fy")]
 struct Args {
     input: String,
 }
 
 #[derive(Deserialize)]
-struct ApiResponse {
-    choices: Vec<Choice>,
+struct MyMemoryResponse {
+    responseData: ResponseData,
 }
 
 #[derive(Deserialize)]
-struct Choice {
-    message: Message,
-}
-
-#[derive(Deserialize)]
-struct Message {
-    content: String,
+struct ResponseData {
+    translatedText: String,
 }
 
 fn is_chinese(text: &str) -> bool {
@@ -36,11 +31,32 @@ fn is_chinese(text: &str) -> bool {
     }
 }
 
+async fn translate(text: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let (source, target) = if is_chinese(text) {
+        ("zh", "en")
+    } else {
+        ("en", "zh")
+    };
+
+    let url = format!(
+        "https://api.mymemory.translated.net/get?q={}&langpair={}|{}",
+        text, source, target
+    );
+
+    let client = reqwest::Client::new();
+    let response = client.get(&url).send().await?;
+
+    let data: MyMemoryResponse = response.json().await?;
+
+    Ok(data.responseData.translatedText)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    println!("input: {}", args.input);
-    println!("is_chinese: {}", is_chinese(&args.input));
+
+    let result = translate(&args.input).await?;
+    println!("{}", result);
 
     Ok(())
 }
