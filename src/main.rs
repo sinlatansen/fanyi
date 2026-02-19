@@ -4,7 +4,8 @@ use serde::Deserialize;
 #[derive(Parser)]
 #[command(name = "fy")]
 struct Args {
-    input: String,
+    #[arg(trailing_var_arg = true)]
+    input: Vec<String>,
 }
 
 #[derive(Deserialize)]
@@ -54,8 +55,13 @@ async fn translate(text: &str) -> Result<String, Box<dyn std::error::Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+    let text = args.input.join(" ");
+    if text.is_empty() {
+        eprintln!("Usage: fy <text>");
+        return Ok(());
+    }
 
-    let result = translate(&args.input).await?;
+    let result = translate(&text).await?;
     println!("{}", result);
 
     Ok(())
